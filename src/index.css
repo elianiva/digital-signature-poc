@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    * {
+        @apply p-0 m-0 box-border;
+    }
+
+    html,
+    body,
+    #root {
+        @apply h-full;
+    }
+
+    .smol-scrollbar::-webkit-scrollbar {
+        @apply w-2;
+    }
+
+    .smol-scrollbar::-webkit-scrollbar-thumb {
+        @apply w-2;
+    }
+}
