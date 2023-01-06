@@ -30,7 +30,7 @@ export function SignaturePopup() {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm z-50">
             <div className="flex flex-col gap-4">
-                <div className="bg-white w-[400px] h-[240px] overflow-hidden rounded-lg">
+                <div className="bg-white w-[320px] h-[180px] overflow-hidden rounded-lg">
                     <SignaturePad
                         ref={signaturePad}
                         options={{
@@ -43,20 +43,20 @@ export function SignaturePopup() {
                 </div>
                 <div className="flex gap-4 w-full">
                     <button
-                        className="font-bold px-6 py-3 bg-teal-200 hover:bg-teal-300 cursor-pointer text-teal-700 rounded-md mx-auto"
+                        className="font-bold px-4 py-2 bg-teal-200 hover:bg-teal-300 cursor-pointer text-teal-700 rounded-md mx-auto"
                         onClick={handleConfirm}
                     >
                         Confirm
                     </button>
                     <div className="flex-1" />
                     <button
-                        className="font-bold px-6 py-3 bg-slate-200 hover:bg-slate-300 cursor-pointer text-slate-700 rounded-md mx-auto"
+                        className="font-bold px-4 py-2 bg-slate-200 hover:bg-slate-300 cursor-pointer text-slate-700 rounded-md mx-auto"
                         onClick={handlePadReset}
                     >
                         Reset
                     </button>
                     <button
-                        className="font-bold px-6 py-3 bg-red-200 hover:bg-red-300 cursor-pointer text-red-700 rounded-md mx-auto"
+                        className="font-bold px-4 py-2 bg-red-200 hover:bg-red-300 cursor-pointer text-red-700 rounded-md mx-auto"
                         onClick={handleCancel}
                     >
                         Cancel

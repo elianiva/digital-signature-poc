@@ -1,12 +1,5 @@
-import {
-    type ChangeEvent,
-    useRef,
-    useState,
-    useEffect,
-    DragEvent,
-    useMemo,
-} from "react";
-import { degrees, PDFDocument, PDFPageDrawImageOptions } from "pdf-lib";
+import { type ChangeEvent, useRef, useState, useEffect, useMemo } from "react";
+import { PDFDocument, PDFPageDrawImageOptions } from "pdf-lib";
 import { pdfjs, Document, Page } from "react-pdf/dist/esm/entry.vite";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import { SignaturePopup } from "./SignaturePopup";
@@ -14,7 +7,7 @@ import { useAppContext } from "./AppContext";
 import interact from "interactjs";
 import { useOnClickOutside } from "./useOnClickOutside";
 import { dragMoveListener, resizeListener } from "./listeners";
-import { dataURItoBlob, toArrayBuffer } from "./utils";
+import { dataURItoBlob } from "./utils";
 
 type Size = {
     width: number;
@@ -26,8 +19,14 @@ type Point = {
     y: number;
 };
 
-function pixelsToPoints(pixels: number, dpi: number): number {
-    return (pixels * 72) / dpi;
+function downloadURI(uri: string, name: string) {
+    const link = document.createElement("a");
+    link.download = name;
+    link.href = uri;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    link.remove();
 }
 
 export function App() {
@@ -45,8 +44,8 @@ export function App() {
     const isSignatureVisible = useMemo(() => signature !== "", [signature]);
     const [signatureFocused, setSignatureFocus] = useState(true);
     const [signatureSize, setSignatureSize] = useState<Size>({
-        width: 400,
-        height: 240,
+        width: 320,
+        height: 180,
     });
     const [signaturePoint, setSignaturePoint] = useState<Point>({
         x: 0,
@@ -83,14 +82,6 @@ export function App() {
             .draggable({
                 listeners: {
                     move: (event) => {
-                        const { x: parentX, y: parentY } =
-                            documentRef.current!.getBoundingClientRect();
-                        const { x: signatureX, y: signatureY } =
-                            event.currentTarget.getBoundingClientRect();
-                        // setSignaturePoint({
-                        //     x: signatureX - parentX,
-                        //     y: signatureY - parentY,
-                        // });
                         const { x, y } = dragMoveListener(event);
                         setSignaturePoint({ x, y });
                     },
@@ -160,7 +151,6 @@ export function App() {
         }
         const scaled = image.scale(0.67);
 
-        // scale back the image
         const args: PDFPageDrawImageOptions = {
             x: signaturePoint.x * 0.66 + 26,
             y: page.getHeight() - signaturePoint.y * 0.66 - scaled.height - 40,
@@ -175,17 +165,7 @@ export function App() {
         );
         setPdfInfo(docUrl);
         setSignature("");
-    }
-
-    function handleReset() {
-        setSignature("");
-        setPdfInfo("");
-        setPdfDocument(undefined);
-        setSignaturePoint({ x: 0, y: 0 });
-        setSignatureSize({ width: 0, height: 0 });
-        setMaxPageNumber(null);
-        setCurrentPageNumber(1);
-        inputRef.current!.value = "";
+        downloadURI(docUrl, pdfDocument.getTitle() ?? "signed-document.pdf");
     }
 
     return (
@@ -217,12 +197,6 @@ export function App() {
                         >
                             Draw a Signature
                         </button>
-                        <button
-                            className="font-bold px-6 py-3 bg-red-200 not:disabled:hover:bg-red-300 cursor-pointer text-red-700 disabled:text-slate-400 rounded-md mx-auto"
-                            onClick={handleReset}
-                        >
-                            Reset
-                        </button>
                         <div className="flex-1" />
                         <button
                             disabled={pdfInfo === "" || signature === ""}
@@ -246,9 +220,9 @@ export function App() {
                                 id="signature"
                                 className={`z-20 box-content ${
                                     signatureFocused
-                                        ? "outline-4 outline-dashed outline-red-500"
+                                        ? "outline-2 outline-dashed outline-red-500"
                                         : ""
-                                } absolute left-10 top-10 w-[400px] h-[240px] ${
+                                } absolute left-10 top-10 w-[320px] h-[180px] ${
                                     isSignatureVisible
                                         ? "visible pointer-events-auto opacity-100"
                                         : "invisible pointer-events-none opacity-0"
