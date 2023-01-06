@@ -4,8 +4,9 @@ import {
     useState,
     useEffect,
     DragEvent,
+    useMemo,
 } from "react";
-import { PDFDocument } from "pdf-lib";
+import { degrees, PDFDocument, PDFPageDrawImageOptions } from "pdf-lib";
 import { pdfjs, Document, Page } from "react-pdf/dist/esm/entry.vite";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import { SignaturePopup } from "./SignaturePopup";
@@ -25,19 +26,27 @@ type Point = {
     y: number;
 };
 
+function pixelsToPoints(pixels: number, dpi: number): number {
+    return (pixels * 72) / dpi;
+}
+
 export function App() {
-    const { isSignaturePopupVisible, setSignaturePopupVisibility, signature } =
-        useAppContext();
+    const {
+        isSignaturePopupVisible,
+        setSignaturePopupVisibility,
+        signature,
+        setSignature,
+    } = useAppContext();
 
     // states
     const [maxPageNumber, setMaxPageNumber] = useState<number | null>(null);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
     const [pdfInfo, setPdfInfo] = useState<string>("");
-    const [isSignatureVisible, setSignatureVisibility] = useState(false);
+    const isSignatureVisible = useMemo(() => signature !== "", [signature]);
     const [signatureFocused, setSignatureFocus] = useState(true);
     const [signatureSize, setSignatureSize] = useState<Size>({
-        width: 0,
-        height: 0,
+        width: 400,
+        height: 240,
     });
     const [signaturePoint, setSignaturePoint] = useState<Point>({
         x: 0,
@@ -48,13 +57,12 @@ export function App() {
     // refs
     const inputRef = useRef<HTMLInputElement>(null);
     const signatureRef = useRef<HTMLDivElement>(null);
-    const documentRef = useRef<HTMLDivElement>(null);
+    const documentRef = useRef<HTMLCanvasElement>(null);
 
     useOnClickOutside(signatureRef, () => setSignatureFocus(false));
 
     useEffect(() => {
         if (signatureRef.current === null) return;
-        setSignatureVisibility(signature !== "");
         interact(signatureRef.current)
             .resizable({
                 edges: { top: true, right: true, bottom: true, left: true },
@@ -136,7 +144,12 @@ export function App() {
     async function handleSave() {
         if (pdfDocument === undefined) return;
 
-        const page = pdfDocument.getPage(currentPageNumber);
+        const page = pdfDocument.getPage(currentPageNumber - 1);
+        if (page === undefined) {
+            alert("failed to get page");
+            return;
+        }
+
         const signatureBytes = dataURItoBlob(signature);
         const image = await pdfDocument.embedPng(
             await signatureBytes.arrayBuffer()
@@ -145,25 +158,27 @@ export function App() {
             alert("failed");
             return;
         }
+        const scaled = image.scale(0.67);
 
-        console.log("ROTATION", page.getRotation());
-
-        const args = {
-            ...signatureSize,
-            ...signaturePoint,
+        // scale back the image
+        const args: PDFPageDrawImageOptions = {
+            x: signaturePoint.x * 0.66 + 26,
+            y: page.getHeight() - signaturePoint.y * 0.66 - scaled.height - 40,
+            width: scaled.width,
+            height: scaled.height,
         };
-        console.log(args);
-
-        page?.drawImage(image, args);
+        page.drawImage(image, args);
 
         const pdfBytes = await pdfDocument.save();
         const docUrl = URL.createObjectURL(
             new Blob([pdfBytes], { type: "application/pdf" })
         );
         setPdfInfo(docUrl);
+        setSignature("");
     }
 
     function handleReset() {
+        setSignature("");
         setPdfInfo("");
         setPdfDocument(undefined);
         setSignaturePoint({ x: 0, y: 0 });
@@ -210,7 +225,7 @@ export function App() {
                         </button>
                         <div className="flex-1" />
                         <button
-                            disabled={pdfInfo === ""}
+                            disabled={pdfInfo === "" || signature === ""}
                             className="font-bold px-6 py-3 bg-blue-200 not:disabled:hover:bg-blue-300 disabled:bg-slate-100 cursor-pointer text-blue-700 disabled:text-slate-400 rounded-md mx-auto disabled:cursor-not-allowed"
                             onClick={handleSave}
                         >
@@ -219,7 +234,6 @@ export function App() {
                     </div>
                     <div className="w-full h-[40rem] mt-8 rounded-lg p-4 bg-slate-100 overflow-y-auto shadow-lg">
                         <Document
-                            inputRef={documentRef}
                             className="text-center relative smol-scrollbar"
                             file={pdfInfo}
                             onLoadSuccess={onDocumentLoadSuccess}
@@ -253,7 +267,9 @@ export function App() {
                             <Page
                                 pageNumber={currentPageNumber}
                                 scale={1.5}
+                                canvasRef={documentRef}
                                 renderTextLayer={false}
+                                renderAnnotationLayer={false}
                             />
                         </Document>
                     </div>
